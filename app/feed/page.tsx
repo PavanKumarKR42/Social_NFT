@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { createBaseAccountSDK } from "@base-org/account";
 import { base } from "viem/chains";
-import { encodeFunctionData, parseUnits } from "viem";
+import { encodeFunctionData } from "viem";
 
 interface StoredImage {
   id: string;
@@ -13,28 +13,13 @@ interface StoredImage {
   timestamp: number;
 }
 
-const NFT_CONTRACT_ADDRESS = "0x9d43C1a00F8dBb18dF905371f7F014eb85eE86b5";
-const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-const MINT_PRICE = "0.01";
+const NFT_CONTRACT_ADDRESS = "0x5AC1860a542212909905390B171b2F1d84435d1a"; // Update with your new contract address
 
 const NFT_CONTRACT_ABI = [
   {
     inputs: [{ internalType: "string", name: "tokenURI", type: "string" }],
     name: "mintNFT",
     outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-] as const;
-
-const USDC_ABI = [
-  {
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    name: "approve",
-    outputs: [{ name: "", type: "bool" }],
     stateMutability: "nonpayable",
     type: "function",
   },
@@ -135,14 +120,7 @@ export default function FeedPage() {
     setMintStatus(prev => ({ ...prev, [image.id]: "Preparing transaction..." }));
 
     try {
-      const amountInUnits = parseUnits(MINT_PRICE, 6);
-
-      const approveData = encodeFunctionData({
-        abi: USDC_ABI,
-        functionName: "approve",
-        args: [NFT_CONTRACT_ADDRESS as `0x${string}`, amountInUnits],
-      });
-
+      // Encode the mint function call
       const mintData = encodeFunctionData({
         abi: NFT_CONTRACT_ABI,
         functionName: "mintNFT",
@@ -151,6 +129,7 @@ export default function FeedPage() {
 
       setMintStatus(prev => ({ ...prev, [image.id]: "Confirm in wallet..." }));
 
+      // Send the transaction (only gas fees, no USDC approval needed!)
       const callsId = (await provider.request({
         method: "wallet_sendCalls",
         params: [
@@ -159,11 +138,6 @@ export default function FeedPage() {
             chainId: `0x${base.id.toString(16)}`,
             from: subAccountAddress,
             calls: [
-              {
-                to: USDC_ADDRESS,
-                data: approveData,
-                value: "0x0",
-              },
               {
                 to: NFT_CONTRACT_ADDRESS,
                 data: mintData,
@@ -177,7 +151,7 @@ export default function FeedPage() {
       console.log("Transaction sent! Calls ID:", callsId);
       setMintStatus(prev => ({ 
         ...prev, 
-        [image.id]: `✓ NFT Minted Successfully!` 
+        [image.id]: `✓ NFT Minted Successfully! 🎉` 
       }));
 
       setTimeout(() => {
@@ -195,7 +169,7 @@ export default function FeedPage() {
       
       if (error?.message) {
         if (error.message.includes("insufficient")) {
-          errorMsg = "Insufficient USDC in Universal Account";
+          errorMsg = "Insufficient funds for gas";
         } else if (error.message.includes("rejected") || error.message.includes("denied")) {
           errorMsg = "Transaction rejected";
         } else {
@@ -321,7 +295,7 @@ export default function FeedPage() {
               color: "rgba(255, 255, 255, 0.7)",
               fontSize: "1.1rem"
             }}>
-              All images stored permanently on IPFS
+              All images stored permanently on IPFS • Free mint (only gas)
             </p>
           </div>
 
@@ -648,7 +622,7 @@ export default function FeedPage() {
                     </div>
                   )}
 
-                  {/* Mint Button */}
+                  {/* Mint Button - FREE! */}
                   {connected ? (
                     <button
                       onClick={() => mintNFT(image)}
@@ -658,7 +632,7 @@ export default function FeedPage() {
                         padding: "14px",
                         background: mintingImageId === image.id
                           ? "rgba(100, 100, 100, 0.3)"
-                          : "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                          : "linear-gradient(135deg, #00ff7f 0%, #00ff40 100%)",
                         border: "none",
                         borderRadius: "12px",
                         color: "#fff",
@@ -668,20 +642,20 @@ export default function FeedPage() {
                         transition: "all 0.3s ease",
                         boxShadow: mintingImageId === image.id 
                           ? "none" 
-                          : "0 8px 25px rgba(79, 172, 254, 0.4)"
+                          : "0 8px 25px rgba(0, 255, 127, 0.4)"
                       }}
                       onMouseEnter={(e) => {
                         if (mintingImageId !== image.id) {
                           e.currentTarget.style.transform = "translateY(-2px)";
-                          e.currentTarget.style.boxShadow = "0 12px 35px rgba(79, 172, 254, 0.6)";
+                          e.currentTarget.style.boxShadow = "0 12px 35px rgba(0, 255, 127, 0.6)";
                         }
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "0 8px 25px rgba(79, 172, 254, 0.4)";
+                        e.currentTarget.style.boxShadow = "0 8px 25px rgba(0, 255, 127, 0.4)";
                       }}
                     >
-                      {mintingImageId === image.id ? "⏳ Minting..." : `🎨 Mint NFT (${MINT_PRICE} USDC)`}
+                      {mintingImageId === image.id ? "⏳ Minting..." : "🎨 FREE Mint NFT (Gas Only)"}
                     </button>
                   ) : (
                     <button
@@ -723,7 +697,7 @@ export default function FeedPage() {
           color: "rgba(255, 255, 255, 0.6)"
         }}>
           <p style={{ marginBottom: "20px", fontSize: "0.95rem" }}>
-            Powered by Pinata IPFS • Base Mainnet • Sub Accounts
+            Powered by Pinata IPFS • Base Mainnet • Sub Accounts • FREE Mint!
           </p>
           <div style={{
             display: "flex",
