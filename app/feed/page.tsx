@@ -91,27 +91,36 @@ export default function FeedPage() {
     setConnectLoading(true);
 
     try {
-      // FIXED: First call wallet_connect
+      // Step 1: Connect wallet
       await provider.request({
         method: "wallet_connect",
         params: [],
       });
 
-      // FIXED: Then request accounts
+      // Step 2: Request accounts
       const accounts = (await provider.request({
         method: "eth_requestAccounts",
         params: [],
       })) as string[];
 
-      // FIXED: With defaultAccount: 'sub', accounts[0] is sub, accounts[1] is universal
+      console.log("Connected accounts:", accounts);
+
+      // With defaultAccount: 'sub', accounts[0] is sub, accounts[1] is universal
       const subAddr = accounts[0];
-      const universalAddr = accounts[1] || accounts[0]; // Fallback to first account
+      const universalAddr = accounts[1] || accounts[0];
       
       setSubAccountAddress(subAddr);
       setUniversalAddress(universalAddr);
+      
+      // Step 3: Wait a moment for sub-account to be fully initialized
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       setConnected(true);
+      console.log("Sub-account:", subAddr);
+      console.log("Universal account:", universalAddr);
     } catch (error: any) {
       console.error("Connection failed:", error);
+      alert("Failed to connect wallet. Please try again.");
     } finally {
       setConnectLoading(false);
     }
@@ -127,6 +136,18 @@ export default function FeedPage() {
     setMintStatus(prev => ({ ...prev, [image.id]: "Preparing transaction..." }));
 
     try {
+      // Verify the account is ready
+      const accounts = (await provider.request({
+        method: "eth_accounts",
+        params: [],
+      })) as string[];
+
+      console.log("Current accounts for minting:", accounts);
+
+      if (!accounts || accounts.length === 0 || accounts[0] !== subAccountAddress) {
+        throw new Error("Sub-account not properly initialized. Please reconnect.");
+      }
+
       // Encode the mint function call
       const mintData = encodeFunctionData({
         abi: NFT_CONTRACT_ABI,
@@ -136,13 +157,13 @@ export default function FeedPage() {
 
       setMintStatus(prev => ({ ...prev, [image.id]: "Confirm in wallet..." }));
 
-      // FIXED: Use version 2.0 and add atomicRequired
+      // Send transaction using wallet_sendCalls
       const callsId = (await provider.request({
         method: "wallet_sendCalls",
         params: [
           {
-            version: "2.0", // FIXED: Changed from "1.0" to "2.0"
-            atomicRequired: true, // FIXED: Added atomicRequired
+            version: "2.0",
+            atomicRequired: true,
             chainId: `0x${baseSepolia.id.toString(16)}`,
             from: subAccountAddress,
             calls: [
@@ -176,7 +197,9 @@ export default function FeedPage() {
       let errorMsg = "Mint failed";
       
       if (error?.message) {
-        if (error.message.includes("insufficient")) {
+        if (error.message.includes("no matching signer")) {
+          errorMsg = "Sub-account not ready. Please reconnect wallet.";
+        } else if (error.message.includes("insufficient")) {
           errorMsg = "Insufficient funds for gas";
         } else if (error.message.includes("rejected") || error.message.includes("denied")) {
           errorMsg = "Transaction rejected";
