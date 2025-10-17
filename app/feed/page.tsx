@@ -13,7 +13,7 @@ interface StoredImage {
   timestamp: number;
 }
 
-const NFT_CONTRACT_ADDRESS = "0x5AC1860a542212909905390B171b2F1d84435d1a"; // Update with your new contract address
+const NFT_CONTRACT_ADDRESS = "0x5AC1860a542212909905390B171b2F1d84435d1a";
 
 const NFT_CONTRACT_ABI = [
   {
@@ -34,6 +34,7 @@ export default function FeedPage() {
   > | null>(null);
   const [connected, setConnected] = useState(false);
   const [subAccountAddress, setSubAccountAddress] = useState<string>("");
+  const [universalAddress, setUniversalAddress] = useState<string>("");
   const [connectLoading, setConnectLoading] = useState(false);
   const [mintingImageId, setMintingImageId] = useState<string | null>(null);
   const [mintStatus, setMintStatus] = useState<{ [key: string]: string }>({});
@@ -90,18 +91,24 @@ export default function FeedPage() {
     setConnectLoading(true);
 
     try {
+      // FIXED: First call wallet_connect
       await provider.request({
         method: "wallet_connect",
         params: [],
       });
 
+      // FIXED: Then request accounts
       const accounts = (await provider.request({
         method: "eth_requestAccounts",
         params: [],
       })) as string[];
 
+      // FIXED: With defaultAccount: 'sub', accounts[0] is sub, accounts[1] is universal
       const subAddr = accounts[0];
+      const universalAddr = accounts[1] || accounts[0]; // Fallback to first account
+      
       setSubAccountAddress(subAddr);
+      setUniversalAddress(universalAddr);
       setConnected(true);
     } catch (error: any) {
       console.error("Connection failed:", error);
@@ -129,12 +136,13 @@ export default function FeedPage() {
 
       setMintStatus(prev => ({ ...prev, [image.id]: "Confirm in wallet..." }));
 
-      // Send the transaction (only gas fees, no USDC approval needed!)
+      // FIXED: Use version 2.0 and add atomicRequired
       const callsId = (await provider.request({
         method: "wallet_sendCalls",
         params: [
           {
-            version: "1.0",
+            version: "2.0", // FIXED: Changed from "1.0" to "2.0"
+            atomicRequired: true, // FIXED: Added atomicRequired
             chainId: `0x${base.id.toString(16)}`,
             from: subAccountAddress,
             calls: [
@@ -361,6 +369,7 @@ export default function FeedPage() {
                 onClick={() => {
                   setConnected(false);
                   setSubAccountAddress("");
+                  setUniversalAddress("");
                 }}
                 style={{
                   padding: "14px 28px",
