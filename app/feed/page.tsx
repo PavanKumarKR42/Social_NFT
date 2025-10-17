@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { createBaseAccountSDK } from "@base-org/account";
-import { base } from "viem/chains";
+import { baseSepolia } from "viem/chains";
 import { encodeFunctionData } from "viem";
 
 interface StoredImage {
@@ -46,7 +46,7 @@ export default function FeedPage() {
         const sdkInstance = createBaseAccountSDK({
           appName: "OnchainStorage",
           appLogoUrl: "https://base.org/logo.png",
-          appChainIds: [base.id],
+          appChainIds: [baseSepolia.id],
           subAccounts: {
             creation: "on-connect",
             defaultAccount: "sub",
@@ -143,7 +143,7 @@ export default function FeedPage() {
           {
             version: "2.0", // FIXED: Changed from "1.0" to "2.0"
             atomicRequired: true, // FIXED: Added atomicRequired
-            chainId: `0x${base.id.toString(16)}`,
+            chainId: `0x${baseSepolia.id.toString(16)}`,
             from: subAccountAddress,
             calls: [
               {
@@ -303,7 +303,7 @@ export default function FeedPage() {
               color: "rgba(255, 255, 255, 0.7)",
               fontSize: "1.1rem"
             }}>
-              All images stored permanently on IPFS • Free mint (only gas)
+              All images stored permanently on IPFS • Free mint (only gas) • Base Sepolia Testnet
             </p>
           </div>
 
@@ -362,7 +362,7 @@ export default function FeedPage() {
                   e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.2)";
                 }}
               >
-                {connectLoading ? "⏳ Connecting..." : "🔗 Connect Base"}
+                {connectLoading ? "⏳ Connecting..." : "🔗 Connect Base Sepolia"}
               </button>
             ) : (
               <button
@@ -706,7 +706,7 @@ export default function FeedPage() {
           color: "rgba(255, 255, 255, 0.6)"
         }}>
           <p style={{ marginBottom: "20px", fontSize: "0.95rem" }}>
-            Powered by Pinata IPFS • Base Mainnet • Sub Accounts • FREE Mint!
+            Powered by Pinata IPFS • Base Sepolia Testnet • Sub Accounts • FREE Mint!
           </p>
           <div style={{
             display: "flex",
