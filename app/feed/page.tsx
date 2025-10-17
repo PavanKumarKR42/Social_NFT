@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { createBaseAccountSDK } from "@base-org/account";
 import { baseSepolia } from "viem/chains";
 import { encodeFunctionData } from "viem";
 
@@ -28,7 +29,9 @@ export default function FeedPage() {
   const [images, setImages] = useState<StoredImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [provider, setProvider] = useState<any>(null);
+  const [provider, setProvider] = useState<ReturnType<
+    ReturnType<typeof createBaseAccountSDK>["getProvider"]
+  > | null>(null);
   const [connected, setConnected] = useState(false);
   const [subAccountAddress, setSubAccountAddress] = useState<string>("");
   const [universalAddress, setUniversalAddress] = useState<string>("");
@@ -40,9 +43,6 @@ export default function FeedPage() {
   useEffect(() => {
     const initializeSDK = async () => {
       try {
-        // Dynamic import to avoid SSR issues
-        const { createBaseAccountSDK } = await import("@base-org/account");
-
         const sdkInstance = createBaseAccountSDK({
           appName: "OnchainStorage",
           appLogoUrl: "https://base.org/logo.png",
@@ -55,9 +55,8 @@ export default function FeedPage() {
 
         const providerInstance = sdkInstance.getProvider();
         setProvider(providerInstance);
-        console.log("✅ SDK initialized successfully");
       } catch (error) {
-        console.error("❌ SDK initialization failed:", error);
+        console.error("SDK initialization failed:", error);
       }
     };
 
@@ -87,60 +86,32 @@ export default function FeedPage() {
   }, []);
 
   const connectWallet = async () => {
-    if (!provider) {
-      console.error("❌ Provider not initialized");
-      return;
-    }
+    if (!provider) return;
 
     setConnectLoading(true);
 
     try {
-      console.log("🔌 Connecting wallet...");
-
-      // Step 1: Connect wallet
+      // FIXED: First call wallet_connect
       await provider.request({
         method: "wallet_connect",
         params: [],
       });
 
-      console.log("✅ Wallet connected");
-
-      // Step 2: Request accounts
+      // FIXED: Then request accounts
       const accounts = (await provider.request({
         method: "eth_requestAccounts",
         params: [],
       })) as string[];
 
-      console.log("📋 Connected accounts:", accounts);
-
-      // With defaultAccount: 'sub', accounts[0] is sub, accounts[1] is universal
+      // FIXED: With defaultAccount: 'sub', accounts[0] is sub, accounts[1] is universal
       const subAddr = accounts[0];
-      const universalAddr = accounts[1] || accounts[0];
+      const universalAddr = accounts[1] || accounts[0]; // Fallback to first account
       
       setSubAccountAddress(subAddr);
       setUniversalAddress(universalAddr);
-      
-      // Step 3: Wait for sub-account to be fully initialized
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       setConnected(true);
-      console.log("✅ Sub-account:", subAddr);
-      console.log("✅ Universal account:", universalAddr);
-
-      // Verify chain ID
-      const chainId = await provider.request({
-        method: "eth_chainId",
-      });
-      console.log("🔗 Connected to chain:", chainId);
-      console.log("🔗 Expected chain:", `0x${baseSepolia.id.toString(16)}`);
-
-      if (chainId !== `0x${baseSepolia.id.toString(16)}`) {
-        console.warn("⚠️ Wrong network! Please switch to Base Sepolia");
-        alert("Wrong network! Please switch to Base Sepolia");
-      }
     } catch (error: any) {
-      console.error("❌ Connection failed:", error);
-      alert("Failed to connect wallet. Please try again.");
+      console.error("Connection failed:", error);
     } finally {
       setConnectLoading(false);
     }
@@ -156,32 +127,6 @@ export default function FeedPage() {
     setMintStatus(prev => ({ ...prev, [image.id]: "Preparing transaction..." }));
 
     try {
-      console.log("🎨 Starting mint for image:", image.id);
-
-      // Verify the account is ready
-      const accounts = (await provider.request({
-        method: "eth_accounts",
-        params: [],
-      })) as string[];
-
-      console.log("📋 Current accounts for minting:", accounts);
-
-      if (!accounts || accounts.length === 0 || accounts[0] !== subAccountAddress) {
-        throw new Error("Sub-account not properly initialized. Please reconnect.");
-      }
-
-      // Verify chain
-      const chainId = await provider.request({
-        method: "eth_chainId",
-      });
-
-      console.log("🔗 Current chain:", chainId);
-      console.log("🔗 Expected chain:", `0x${baseSepolia.id.toString(16)}`);
-
-      if (chainId !== `0x${baseSepolia.id.toString(16)}`) {
-        throw new Error("Wrong network! Please switch to Base Sepolia");
-      }
-
       // Encode the mint function call
       const mintData = encodeFunctionData({
         abi: NFT_CONTRACT_ABI,
@@ -189,24 +134,29 @@ export default function FeedPage() {
         args: [image.image],
       });
 
-      console.log("📝 Encoded mint data:", mintData.slice(0, 20) + "...");
-
       setMintStatus(prev => ({ ...prev, [image.id]: "Confirm in wallet..." }));
 
-      // Send transaction
-      const txHash = (await provider.request({
-        method: "eth_sendTransaction",
+      // FIXED: Use version 2.0 and add atomicRequired
+      const callsId = (await provider.request({
+        method: "wallet_sendCalls",
         params: [
           {
+            version: "2.0", // FIXED: Changed from "1.0" to "2.0"
+            atomicRequired: true, // FIXED: Added atomicRequired
+            chainId: `0x${baseSepolia.id.toString(16)}`,
             from: subAccountAddress,
-            to: NFT_CONTRACT_ADDRESS,
-            data: mintData,
-            value: "0x0",
+            calls: [
+              {
+                to: NFT_CONTRACT_ADDRESS,
+                data: mintData,
+                value: "0x0",
+              },
+            ],
           },
         ],
       })) as string;
 
-      console.log("✅ Transaction sent! Hash:", txHash);
+      console.log("Transaction sent! Calls ID:", callsId);
       setMintStatus(prev => ({ 
         ...prev, 
         [image.id]: `✓ NFT Minted Successfully! 🎉` 
@@ -221,24 +171,15 @@ export default function FeedPage() {
       }, 8000);
 
     } catch (error: any) {
-      console.error("❌ Mint failed:", error);
-      console.error("Error details:", {
-        message: error.message,
-        code: error.code,
-        data: error.data,
-      });
+      console.error("Mint failed:", error);
       
       let errorMsg = "Mint failed";
       
       if (error?.message) {
-        if (error.message.includes("no matching signer")) {
-          errorMsg = "Sub-account not ready. Please reconnect wallet.";
-        } else if (error.message.includes("insufficient")) {
+        if (error.message.includes("insufficient")) {
           errorMsg = "Insufficient funds for gas";
         } else if (error.message.includes("rejected") || error.message.includes("denied")) {
           errorMsg = "Transaction rejected";
-        } else if (error.message.includes("network") || error.message.includes("chain")) {
-          errorMsg = "Wrong network. Please switch to Base Sepolia.";
         } else {
           errorMsg = error.message.slice(0, 50);
         }
@@ -408,8 +349,7 @@ export default function FeedPage() {
                   fontWeight: "600",
                   cursor: connectLoading || !provider ? "not-allowed" : "pointer",
                   transition: "all 0.3s ease",
-                  whiteSpace: "nowrap",
-                  opacity: connectLoading || !provider ? 0.6 : 1
+                  whiteSpace: "nowrap"
                 }}
                 onMouseEnter={(e) => {
                   if (!connectLoading && provider) {
@@ -422,7 +362,7 @@ export default function FeedPage() {
                   e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.2)";
                 }}
               >
-                {connectLoading ? "⏳ Connecting..." : !provider ? "⏳ Loading..." : "🔗 Connect Base Sepolia"}
+                {connectLoading ? "⏳ Connecting..." : "🔗 Connect Base Sepolia"}
               </button>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-end" }}>
@@ -710,7 +650,7 @@ export default function FeedPage() {
                     </div>
                   )}
 
-                  {/* Mint Button */}
+                  {/* Mint Button - FREE! */}
                   {connected ? (
                     <button
                       onClick={() => mintNFT(image)}
@@ -785,7 +725,7 @@ export default function FeedPage() {
           color: "rgba(255, 255, 255, 0.6)"
         }}>
           <p style={{ marginBottom: "20px", fontSize: "0.95rem" }}>
-            Powered by Pinata IPFS • Base Sepolia Testnet • Sub Account • FREE Mint!
+            Powered by Pinata IPFS • Base Sepolia Testnet • Sub Accounts • FREE Mint!
           </p>
           <div style={{
             display: "flex",
