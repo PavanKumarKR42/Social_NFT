@@ -365,55 +365,36 @@ export default function FeedPage() {
                 {connectLoading ? "⏳ Connecting..." : "🔗 Connect Base Sepolia"}
               </button>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-end" }}>
-                <button
-                  onClick={() => {
-                    setConnected(false);
-                    setSubAccountAddress("");
-                    setUniversalAddress("");
-                  }}
-                  style={{
-                    padding: "14px 28px",
-                    background: "rgba(0, 255, 127, 0.1)",
-                    backdropFilter: "blur(10px)",
-                    border: "1px solid rgba(0, 255, 127, 0.3)",
-                    borderRadius: "12px",
-                    color: "#fff",
-                    fontSize: "1rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    whiteSpace: "nowrap"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 69, 96, 0.2)";
-                    e.currentTarget.style.borderColor = "rgba(255, 69, 96, 0.4)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(0, 255, 127, 0.1)";
-                    e.currentTarget.style.borderColor = "rgba(0, 255, 127, 0.3)";
-                  }}
-                >
-                  ✓ Connected
-                </button>
-                <div style={{
-                  background: "rgba(255, 255, 255, 0.05)",
+              <button
+                onClick={() => {
+                  setConnected(false);
+                  setSubAccountAddress("");
+                  setUniversalAddress("");
+                }}
+                style={{
+                  padding: "14px 28px",
+                  background: "rgba(0, 255, 127, 0.1)",
                   backdropFilter: "blur(10px)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: "8px",
-                  padding: "8px 12px",
-                  fontSize: "0.75rem",
-                  color: "rgba(255, 255, 255, 0.8)",
-                  fontFamily: "monospace"
-                }}>
-                  <div style={{ marginBottom: "4px" }}>
-                    <span style={{ color: "rgba(79, 172, 254, 0.8)", fontWeight: "600" }}>Sub:</span> {subAccountAddress.slice(0, 6)}...{subAccountAddress.slice(-4)}
-                  </div>
-                  <div>
-                    <span style={{ color: "rgba(0, 255, 127, 0.8)", fontWeight: "600" }}>Universal:</span> {universalAddress.slice(0, 6)}...{universalAddress.slice(-4)}
-                  </div>
-                </div>
-              </div>
+                  border: "1px solid rgba(0, 255, 127, 0.3)",
+                  borderRadius: "12px",
+                  color: "#fff",
+                  fontSize: "1rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  whiteSpace: "nowrap"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 69, 96, 0.2)";
+                  e.currentTarget.style.borderColor = "rgba(255, 69, 96, 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(0, 255, 127, 0.1)";
+                  e.currentTarget.style.borderColor = "rgba(0, 255, 127, 0.3)";
+                }}
+              >
+                ✓ Connected
+              </button>
             )}
           </div>
         </div>
@@ -725,7 +706,7 @@ export default function FeedPage() {
           color: "rgba(255, 255, 255, 0.6)"
         }}>
           <p style={{ marginBottom: "20px", fontSize: "0.95rem" }}>
-            Powered by Pinata IPFS • Base Sepolia Testnet • Sub Accounts • FREE Mint!
+            Powered by Pinata IPFS • Base Sepolia Testnet • Sub Accounts • FREE Mint
           </p>
           <div style={{
             display: "flex",
