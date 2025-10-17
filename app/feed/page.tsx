@@ -157,27 +157,20 @@ export default function FeedPage() {
 
       setMintStatus(prev => ({ ...prev, [image.id]: "Confirm in wallet..." }));
 
-      // Send transaction using wallet_sendCalls
-      const callsId = (await provider.request({
-        method: "wallet_sendCalls",
+      // Use eth_sendTransaction instead of wallet_sendCalls
+      const txHash = (await provider.request({
+        method: "eth_sendTransaction",
         params: [
           {
-            version: "2.0",
-            atomicRequired: true,
-            chainId: `0x${baseSepolia.id.toString(16)}`,
             from: subAccountAddress,
-            calls: [
-              {
-                to: NFT_CONTRACT_ADDRESS,
-                data: mintData,
-                value: "0x0",
-              },
-            ],
+            to: NFT_CONTRACT_ADDRESS,
+            data: mintData,
+            value: "0x0",
           },
         ],
       })) as string;
 
-      console.log("Transaction sent! Calls ID:", callsId);
+      console.log("Transaction sent! Hash:", txHash);
       setMintStatus(prev => ({ 
         ...prev, 
         [image.id]: `✓ NFT Minted Successfully! 🎉` 
@@ -748,7 +741,7 @@ export default function FeedPage() {
           color: "rgba(255, 255, 255, 0.6)"
         }}>
           <p style={{ marginBottom: "20px", fontSize: "0.95rem" }}>
-            Powered by Pinata IPFS • Base Sepolia Testnet • Sub Accounts • FREE Mint!
+            Powered by Pinata IPFS • Base Sepolia Testnet • Sub Account • FREE Mint!
           </p>
           <div style={{
             display: "flex",
